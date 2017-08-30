@@ -9,7 +9,7 @@ namespace RenderLab
     m_window(window),
     m_graphics(graphics),
     m_currentLight(0),
-    m_depthPrepass(false)
+    m_depthPrepass(true)
   {
   }
 

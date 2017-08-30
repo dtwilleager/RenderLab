@@ -12,7 +12,7 @@ namespace RenderLab
     m_lightFenceIndex(0),
     m_allocatedImageMemory(0),
     m_deferred(true),
-    m_depthPrepass(false)
+    m_depthPrepass(true)
   {
   }
 
