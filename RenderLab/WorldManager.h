@@ -55,6 +55,7 @@ namespace RenderLab
     void                buildFrame();
     void                executeFrame();
 
+
     void                updateWindow(uint32_t x, uint32_t y, uint32_t width, uint32_t height);
 
   private:
@@ -72,6 +73,7 @@ namespace RenderLab
     unsigned long long                        m_totalTime;
     float                                     m_constantDepthBias;
     float                                     m_slopeDepthBias;
+    bool                                      m_clusterEntityFreeze;
 
     void processAddEntity(shared_ptr<Entity> entity);
     void processRemoveEntity(shared_ptr<Entity> entity);

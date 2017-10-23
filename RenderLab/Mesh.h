@@ -15,9 +15,15 @@ namespace RenderLab
   class Mesh
   {
   public:
-    Mesh(string name, size_t numVerts, size_t numVertexArrayBuffers);
+    enum Primitive {
+      TRIANGLES,
+      LINES
+    };
+
+    Mesh(string name, Primitive primitive, size_t numVerts, size_t numVertexArrayBuffers);
     ~Mesh();
 
+    Primitive             getPrimitive();
     void                  addVertexBuffer(unsigned int index, size_t size, size_t numBytes, float* data);
     void                  addIndexBuffer(size_t size, unsigned int* data);
     size_t                getVertexBufferSize(size_t index);
@@ -45,6 +51,7 @@ namespace RenderLab
     };
  
     string                m_name;
+    Primitive             m_primitive;
     size_t                m_numVerts;
     size_t                m_numVertexArrayBuffers;
     struct vertexData*    m_vertexData;

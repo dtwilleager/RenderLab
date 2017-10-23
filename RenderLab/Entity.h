@@ -18,10 +18,10 @@ using std::vector;
 using std::shared_ptr;
 using std::enable_shared_from_this;
 
-class Component;
-
 namespace RenderLab
 {
+  class Component;
+
   class Entity: public enable_shared_from_this<Entity>
   {
   public:

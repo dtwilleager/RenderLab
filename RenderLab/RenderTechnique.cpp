@@ -9,7 +9,9 @@ namespace RenderLab
     m_window(window),
     m_graphics(graphics),
     m_currentLight(0),
-    m_depthPrepass(false)
+    m_depthPrepass(false),
+    m_clusterData(nullptr),
+    m_freezeClusterEntity(false)
   {
   }
 
@@ -113,6 +115,177 @@ namespace RenderLab
     m_graphics->resize(m_onscreenView, width, height);
   }
 
+  void RenderTechnique::buildFrustumLines(shared_ptr<View> view)
+  {
+    m_clusterEntity = make_shared<Entity>("Frustum Lines");
+    shared_ptr<RenderComponent> renderComponent = make_shared<RenderComponent>("Frustum Lines");
+    vec2 viewportSize;
+    view->getViewportSize(viewportSize);
+
+    // Determine the number of X and Y tiles
+    uint32_t segmentWidth = 64;
+    uint32_t segmentHeight = 64;
+    uint32_t numXSegments = (uint32_t)viewportSize.x / segmentWidth;
+    uint32_t numYSegments = (uint32_t)viewportSize.y / segmentHeight;
+    uint32_t numZSegments = 10;
+
+    if ((uint32_t)viewportSize.x % segmentWidth != 0)
+    {
+      numXSegments++;
+    }
+    if ((uint32_t)viewportSize.y % segmentHeight != 0)
+    {
+      numYSegments++;
+    }
+    uint32_t numVerts = (numXSegments + 1) * (numYSegments + 1) * numZSegments;
+    uint32_t numClusters = numXSegments * numYSegments * (numZSegments - 1);
+
+    shared_ptr<Mesh> mesh = make_shared<Mesh>("Frustum Lines", Mesh::LINES, numVerts, 2);
+
+    float* vertexBuffer = (float*)malloc(numVerts * 3 * sizeof(float));
+    float* normalBuffer = (float*)malloc(numVerts * 3 * sizeof(float));
+
+    uint32_t* indexBuffer = (uint32_t*)malloc(numClusters * 12 * 2 * sizeof(uint32_t));
+
+    m_clusterData = (ClusterData*)malloc(sizeof(ClusterData));
+    m_clusterData->m_clusters = (Cluster*)malloc(numClusters*sizeof(Cluster));
+    m_clusterData->m_numClusterVerts = numVerts;
+    m_clusterData->m_localVerts = vertexBuffer;
+    m_clusterData->m_clusterVerts = (vec3*)malloc(numVerts*sizeof(vec3));
+
+    // Get the eye and direction in world space
+    mat4 viewTransform;
+    view->getViewTransform(viewTransform);
+    mat4 invViewTransform = glm::inverse(viewTransform);
+
+    vec3 worldDirectionX = vec3(1.0f, 0.0f, 0.0f);
+    vec3 worldDirectionY = vec3(0.0f, 1.0f, 0.0f);
+    vec3 worldDirectionZ = vec3(0.0f, 0.0f, 1.0f);
+    vec3 worldEye = vec3();
+
+    //vec3 worldDirectionX = vec3(invViewTransform[0]);
+    //vec3 worldDirectionY = vec3(invViewTransform[1]);
+    //vec3 worldDirectionZ = vec3(invViewTransform[2]);
+    //vec3 worldEye = vec3(invViewTransform[3]);
+
+    float hFov = view->getFieldOfView();
+    float nearClip = view->getNearClip();
+    float farClip = view->getFarClip();
+
+    vec3 nearZ = worldEye + -worldDirectionZ * nearClip;
+    vec3 farZ = worldEye + -worldDirectionZ * farClip;
+
+    float zInc = (farClip - nearClip) / numZSegments;
+    
+    uint32_t vindex = 0;
+    uint32_t nindex = 0;
+
+    vec3 currentZ = nearZ;
+    float currentZD = nearClip;
+
+    for (uint32_t k = 0; k < numZSegments; k++)
+    {
+      float farD = tan(hFov*0.5f * (float)M_PI / 180.0f) * currentZD;
+      float currentYD = farD;
+      float xInc = farD * 2.0f / numXSegments;
+      float yInc = -farD * 2.0f / numYSegments;
+
+      for (uint32_t j = 0; j < numYSegments + 1; j++)
+      {
+        float currentXD = -farD;
+        for (uint32_t i = 0; i < numXSegments + 1; i++)
+        {
+          vec3 currentPoint = currentZ + worldDirectionX * currentXD + worldDirectionY * currentYD;
+          vertexBuffer[vindex++] = currentPoint.x;
+          vertexBuffer[vindex++] = currentPoint.y;
+          vertexBuffer[vindex++] = currentPoint.z;
+          normalBuffer[nindex++] = 0.0f;
+          normalBuffer[nindex++] = 0.0f;
+          normalBuffer[nindex++] = 1.0f;
+          currentXD += xInc;
+        }
+        currentYD += yInc;
+      }
+      currentZD += zInc;
+      currentZ = worldEye + -worldDirectionZ * currentZD;
+    }
+
+    uint32_t iindex = 0;
+    uint32_t bvindex = 0;
+    for (uint32_t k = 0; k < numZSegments-1; k++)
+    {
+      vindex = k * (numYSegments + 1) * (numXSegments + 1);
+      bvindex = (k+1) * (numYSegments + 1) * (numXSegments + 1);
+      for (uint32_t j = 0; j < numYSegments; j++)
+      {    
+        for (uint32_t i = 0; i < numXSegments; i++)
+        {
+          indexBuffer[iindex++] = vindex;
+          indexBuffer[iindex++] = vindex+1;
+          indexBuffer[iindex++] = vindex + 1;
+          indexBuffer[iindex++] = vindex + 1 + numXSegments + 1;
+          indexBuffer[iindex++] = vindex + 1 + numXSegments + 1;
+          indexBuffer[iindex++] = vindex + numXSegments + 1;
+          indexBuffer[iindex++] = vindex + numXSegments + 1;
+          indexBuffer[iindex++] = vindex;
+
+          indexBuffer[iindex++] = vindex;
+          indexBuffer[iindex++] = bvindex;
+          indexBuffer[iindex++] = vindex + 1;
+          indexBuffer[iindex++] = bvindex + 1;
+          indexBuffer[iindex++] = vindex + 1 + numXSegments + 1;
+          indexBuffer[iindex++] = bvindex + 1 + numXSegments + 1;
+          indexBuffer[iindex++] = vindex + numXSegments + 1;
+          indexBuffer[iindex++] = bvindex + numXSegments + 1;
+
+          indexBuffer[iindex++] = bvindex;
+          indexBuffer[iindex++] = bvindex + 1;
+          indexBuffer[iindex++] = bvindex + 1;
+          indexBuffer[iindex++] = bvindex + 1 + numXSegments + 1;
+          indexBuffer[iindex++] = bvindex + 1 + numXSegments + 1;
+          indexBuffer[iindex++] = bvindex + numXSegments + 1;
+          indexBuffer[iindex++] = bvindex + numXSegments + 1;
+          indexBuffer[iindex++] = bvindex;
+
+          m_clusterData->m_clusters->m_verts[0] = vindex;
+          m_clusterData->m_clusters->m_verts[1] = vindex + 1;
+          m_clusterData->m_clusters->m_verts[2] = vindex + 1 + numXSegments + 1;
+          m_clusterData->m_clusters->m_verts[3] = vindex + numXSegments + 1;
+          m_clusterData->m_clusters->m_verts[4] = bvindex;
+          m_clusterData->m_clusters->m_verts[5] = bvindex + 1;
+          m_clusterData->m_clusters->m_verts[6] = bvindex + 1 + numXSegments + 1;
+          m_clusterData->m_clusters->m_verts[7] = bvindex + numXSegments + 1;
+
+          vindex++;
+          bvindex++;
+        }
+        vindex++;
+        bvindex++;
+      }
+    }
+
+    mesh->addVertexBuffer(0, 3, numVerts * 3 * sizeof(float), vertexBuffer);
+    mesh->addVertexBuffer(1, 3, numVerts * 3 * sizeof(float), normalBuffer);
+    mesh->addIndexBuffer(numClusters * 12 * 2, indexBuffer);
+
+    shared_ptr<Material>material = make_shared<Material>("Frustum Lines", Material::DEFERRED_LIT);
+    material->setAlbedoColor(vec4(1.0f, 1.0f, 1.0f, 1.0f));
+    mesh->setMaterial(material);
+
+    free(normalBuffer);
+    free(indexBuffer);
+    renderComponent->addMesh(mesh);
+    m_clusterEntity->addComponent(renderComponent);
+    m_clusterEntity->setTransform(invViewTransform);
+    m_clusterEntity->updateCompositeTransform(mat4());
+    addRenderComponent(renderComponent, m_clusterEntity);
+  }
+
+  void RenderTechnique::setClusterEntityFreeze(bool freeze)
+  {
+    m_freezeClusterEntity = freeze;
+  }
+
   void RenderTechnique::build()
   {
     size_t numFrames = 2;
@@ -124,6 +297,10 @@ namespace RenderLab
     for (size_t i = 0; i < m_views.size(); ++i)
     {
       m_graphics->build(m_views[i], numFrames);
+      if (m_views[i]->getType() == View::SCREEN)
+      {
+        buildFrustumLines(m_views[i]);
+      }
     }
 
     //for (size_t i = 0; i < m_lightComponents.size(); ++i)
@@ -178,7 +355,7 @@ namespace RenderLab
 
   void RenderTechnique::createCompositeMeshes()
   {
-    shared_ptr<Mesh> mesh = make_shared<Mesh>("Composite Mesh", 24, 1);
+    shared_ptr<Mesh> mesh = make_shared<Mesh>("Composite Mesh", Mesh::TRIANGLES, 24, 1);
     shared_ptr<Material> material = make_shared<Material>("Composite Material", Material::DEFERRED_COMPOSITE);
     mesh->setMaterial(material);
 
@@ -234,6 +411,7 @@ namespace RenderLab
     shared_ptr<View> lastView = m_onscreenView;
 
     //updateFrameData(frameIndex);
+    updateClusterData(m_onscreenView, frameIndex);
     updateMeshData(m_onscreenView, frameIndex);
     bool lastLight = false;
 
@@ -289,6 +467,31 @@ namespace RenderLab
     data = (float*)glm::value_ptr(lightInfo);
     size = sizeof(lightInfo);
     m_graphics->updateUniformData(m_frameDataUniformBuffers[frameIndex], offset, data, size);
+  }
+
+  void RenderTechnique::updateClusterData(shared_ptr<View> view, uint32_t frameIndex)
+  {
+    mat4 viewTransform;
+    mat4 invViewTransform;
+
+    view->getViewTransform(viewTransform);
+    invViewTransform = glm::inverse(viewTransform);
+
+    uint32_t vindex = 0;
+    for (uint32_t i = 0; i < m_clusterData->m_numClusterVerts; i++)
+    {
+      vec4 localPoint(0.0f, 0.0f, 0.0f, 1.0f);
+      localPoint.x = m_clusterData->m_localVerts[vindex++];
+      localPoint.y = m_clusterData->m_localVerts[vindex++];
+      localPoint.z = m_clusterData->m_localVerts[vindex++];
+      m_clusterData->m_clusterVerts[i] = vec3(invViewTransform * localPoint);
+    }
+
+    if (!m_freezeClusterEntity)
+    {
+      m_clusterEntity->setTransform(invViewTransform);
+      m_clusterEntity->updateCompositeTransform(mat4());
+    }
   }
 
   void RenderTechnique::updateFrameData(uint32_t frameIndex)

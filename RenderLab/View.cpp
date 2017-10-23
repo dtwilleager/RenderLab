@@ -12,7 +12,7 @@ namespace RenderLab
     m_type(type),
     m_fieldOfView(45.0f),
     m_nearClip(0.1f),
-    m_farClip(1000.0f),
+    m_farClip(500.0f),
     m_viewportPosition(vec2(0, 0)),
     m_viewportSize(vec2(1, 1)),
     m_graphicsData(nullptr)

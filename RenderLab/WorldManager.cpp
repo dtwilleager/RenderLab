@@ -14,7 +14,8 @@ namespace RenderLab {
   WorldManager::WorldManager(string name, HINSTANCE hinstance, HWND window) :
     m_name(name),
     m_constantDepthBias(3.0f),
-    m_slopeDepthBias(0.0f)
+    m_slopeDepthBias(0.0f),
+    m_clusterEntityFreeze(false)
   {
     m_graphics = make_shared<GraphicsVulkan>("Vulkan Graphics", hinstance, window);
     //m_graphics = make_shared<GraphicsOpenGL>("OpenGL Graphics", hinstance, window);
@@ -247,6 +248,10 @@ namespace RenderLab {
       case VK_SUBTRACT:
         m_constantDepthBias -= 1.0f;
         printLog("Bias " + std::to_string(m_constantDepthBias));
+        break;
+      case VK_F1:
+        m_clusterEntityFreeze = !m_clusterEntityFreeze;
+        m_renderTechnique->setClusterEntityFreeze(m_clusterEntityFreeze);
         break;
       }
     }

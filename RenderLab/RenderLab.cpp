@@ -182,7 +182,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    // Create the screen view and its processor
    shared_ptr<RenderLab::View> screenView = make_shared<RenderLab::View>("Screen View", RenderLab::View::SCREEN);
    screenView->setViewportSize(vec2(1200, 800));
-   mat4 transform = glm::lookAt(vec3(0.0f, 5.0f, -15.0f), vec3(), vec3(0.0f, -1.0f, 1.0f));
+   mat4 transform = glm::lookAt(vec3(0.0f, -15.0f, 0.0f), vec3(0.0f, -15.0f, 0.0f) + vec3(0.0f, 0.0f, 1.0f), vec3(0.0f, 1.0f, 0.0f));
    screenView->setViewTransform(transform);
    g_worldManager->addView(screenView);
 

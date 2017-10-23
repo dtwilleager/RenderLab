@@ -7,8 +7,9 @@ using std::memcpy;
 
 namespace RenderLab
 {
-  Mesh::Mesh(string name, size_t numVerts, size_t numVertexArrayBuffers):
+  Mesh::Mesh(string name, Primitive primitive, size_t numVerts, size_t numVertexArrayBuffers):
     m_name(name),
+    m_primitive(primitive),
     m_numVerts(numVerts),
     m_numVertexArrayBuffers(numVertexArrayBuffers),
     m_graphicsData(nullptr),
@@ -32,6 +33,11 @@ namespace RenderLab
       }
     }
     delete m_vertexData;
+  }
+
+  Mesh::Primitive Mesh::getPrimitive()
+  {
+    return m_primitive;
   }
 
   void Mesh::setRenderComponent(shared_ptr<RenderComponent> renderComponent)

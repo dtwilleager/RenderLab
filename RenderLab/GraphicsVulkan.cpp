@@ -377,7 +377,14 @@ namespace RenderLab
 
       meshData->m_inputAssemblyState = {};
       meshData->m_inputAssemblyState.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-      meshData->m_inputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+      if (mesh->getPrimitive() == Mesh::TRIANGLES)
+      {
+        meshData->m_inputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+      }
+      else
+      {
+        meshData->m_inputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+      } 
       meshData->m_inputAssemblyState.primitiveRestartEnable = false;
 
       meshData->m_indexType = VK_INDEX_TYPE_UINT32;
@@ -574,7 +581,7 @@ namespace RenderLab
           vertexShaderFile += "GBuffer_VN_NT.vert.spv";
         }
         else
-        { 
+        {
           vertexShaderFile += (material->getNormalTexture() == nullptr ? "GBuffer_VN.vert.spv" : "GBuffer_TN.vert.spv");
         }
       }
@@ -583,11 +590,11 @@ namespace RenderLab
         vertexShaderFile += "DeferredComposite.vert.spv";
         fragmentShaderFile += "DeferredComposite.frag.spv";
       }
-	  else if (material->getMaterialType() == Material::DEPTH_PREPASS)
-	  {
-		  vertexShaderFile += "DepthPrepass.vert.spv";
-		  fragmentShaderFile += "DepthPrepass.frag.spv";
-	  }
+      else if (material->getMaterialType() == Material::DEPTH_PREPASS)
+      {
+        vertexShaderFile += "DepthPrepass.vert.spv";
+        fragmentShaderFile += "DepthPrepass.frag.spv";
+      }
 
       materialData->m_vertexShaderCode = readFile(vertexShaderFile);
       materialData->m_fragmentShaderCode = readFile(fragmentShaderFile);

@@ -130,7 +130,7 @@ namespace RenderLab
 
       if (mesh == nullptr)
       {
-        mesh = make_shared<Mesh>("", numVerts, numAttributes);
+        mesh = make_shared<Mesh>("", Mesh::TRIANGLES, numVerts, numAttributes);
       }
       size_t numBytes = size*numVerts * sizeof(float);
       float* data = (float*)malloc(numBytes);
@@ -277,7 +277,7 @@ namespace RenderLab
           numBuffers += 2;
         }
 
-        rlMesh = make_shared<Mesh>(scene->mRootNode->mName.C_Str(), numVerts, numBuffers);
+        rlMesh = make_shared<Mesh>(scene->mRootNode->mName.C_Str(), Mesh::TRIANGLES, numVerts, numBuffers);
         int texIndex = 0;
         aiString texturePath;
         aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
@@ -355,7 +355,7 @@ namespace RenderLab
           numBuffers += 2;
         }
 
-        rlMesh = make_shared<Mesh>(node->mName.C_Str(), numVerts, numBuffers);
+        rlMesh = make_shared<Mesh>(node->mName.C_Str(), Mesh::TRIANGLES, numVerts, numBuffers);
         printLog("Loaded Mesh: " + std::to_string(numVerts));
         int texIndex = 0;
         aiString texturePath;

@@ -33,7 +33,7 @@ namespace RenderLab
       SHADOW_CUBE,
       DEFERRED_COMPOSITE,
       DEFERRED_LIT,
-	  DEPTH_PREPASS
+	    DEPTH_PREPASS
     };
 
     Material(string name, Type type);
