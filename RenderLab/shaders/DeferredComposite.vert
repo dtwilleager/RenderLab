@@ -29,6 +29,6 @@ layout(push_constant) uniform LightData {
 
 void main()
 {
-  vec3 position = in_pos * 15.0f * PI + lightData.lightPosition.xyz;
+  vec3 position = in_pos * 25.0f + lightData.lightPosition.xyz;
   gl_Position = objectParams.view_projection * vec4(position, 1.0);
 }

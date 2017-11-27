@@ -30,6 +30,11 @@ using std::map;
 
 namespace RenderLab
 {
+  class RenderTechnique;
+  class Graphics;
+  class RenderComponent;
+  class ModelLoader;
+
   class WorldManager
   {
   public:
@@ -57,6 +62,7 @@ namespace RenderLab
 
 
     void                updateWindow(uint32_t x, uint32_t y, uint32_t width, uint32_t height);
+    void                printLog(string s);
 
   private:
     string      m_name;
@@ -84,7 +90,6 @@ namespace RenderLab
     void removeLightComponent(shared_ptr<LightComponent> lightComponent, shared_ptr<Entity> entity);
     void removeRenderComponent(shared_ptr<RenderComponent> renderComponent, shared_ptr<Entity> entity);
 
-    void printLog(string s);
 
     void updateTransforms();
     void updateTransform(shared_ptr<Entity> entity, mat4& parent);

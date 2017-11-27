@@ -239,7 +239,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
    colors[5] = vec3(1.0f, 1.0f, 0.0f);
    colors[6] = vec3(1.0f, 1.0f, 1.0f);
 
-   for (size_t i = 0; i < 200; i++)
+   for (size_t i = 0; i < 500; i++)
    {
      shared_ptr<RenderLab::Entity> lightE = make_shared<RenderLab::Entity>("Light " + i);
      shared_ptr<RenderLab::LightComponent> lightC = make_shared<RenderLab::LightComponent>("Light " + i, RenderLab::LightComponent::POINT, false);

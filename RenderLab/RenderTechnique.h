@@ -7,6 +7,7 @@
 #include "Graphics.h"
 #include "UniformBuffer.h"
 #include "RenderTechnique.h"
+#include "WorldManager.h"
 
 #include <string>
 #include <memory>
@@ -27,11 +28,12 @@ namespace RenderLab
   class RenderComponent;
   class LightComponent;
   class Mesh;
+  class WorldManager;
 
   class RenderTechnique
   {
   public:
-    RenderTechnique(string name, HINSTANCE hinstance, HWND window, shared_ptr<Graphics> graphics);
+    RenderTechnique(string name, WorldManager* worldManager, HINSTANCE hinstance, HWND window, shared_ptr<Graphics> graphics);
     ~RenderTechnique();
 
     void addRenderComponent(shared_ptr<RenderComponent> renderComponent, shared_ptr<Entity> entity);
@@ -57,6 +59,10 @@ namespace RenderLab
     void updateMeshData(shared_ptr<View> view, shared_ptr<Mesh> mesh, shared_ptr<Entity> entity, uint32_t frameIndex, uint32_t meshIndex);
     void createCompositeMeshes();
     void buildFrustumLines(shared_ptr<View> view);
+    vec4 planeEquation(vec3 p1, vec3 p2, vec3 p3);
+    float updatePlaneD(vec4 plane, vec3 p);
+    bool intersectsCluster(uint32_t clusterIndex, vec3 lightViewPosition, float radius);
+
 
     struct Light
     {
@@ -81,13 +87,18 @@ namespace RenderLab
     };
 
     struct Cluster {
-      uint32_t m_verts[8];
+      uint32_t                            m_verts[8];
+	    vec4	                              m_planes[6];
+      vector<shared_ptr<LightComponent>>* m_lights;
     };
 
     struct ClusterData {
       uint32_t  m_numClusterVerts;
       vec3*     m_clusterVerts;
       float*    m_localVerts;
+	    uint32_t  m_numXSegments;
+	    uint32_t  m_numYSegments;
+	    uint32_t  m_numZSegments;
       Cluster*  m_clusters;
     };
 
@@ -96,6 +107,7 @@ namespace RenderLab
     HWND                  m_window;
     shared_ptr<Graphics>  m_graphics;
 
+    WorldManager*                         m_worldManager;
     vector<shared_ptr<RenderComponent>>   m_renderComponents;
     vector<shared_ptr<Entity>>            m_renderEntities;
     vector<shared_ptr<LightComponent>>    m_lightComponents;

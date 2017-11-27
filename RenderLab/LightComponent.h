@@ -32,6 +32,8 @@ namespace RenderLab
     bool isDirty();
     void setPosition(vec3& position);
     void getPosition(vec3& position);
+    void setViewPosition(vec3& position);
+    void getViewPosition(vec3& position);
     void setDirection(vec3& direction);
     void getDirection(vec3& direction);
     void setAmbient(vec3& ambient);
@@ -55,6 +57,7 @@ namespace RenderLab
     Type              m_type;
     bool              m_dirty;
     vec3              m_position;
+    vec3              m_viewPosition;
     vec3              m_direction;
     vec3              m_ambient;
     vec3              m_diffuse;

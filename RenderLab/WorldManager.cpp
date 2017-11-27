@@ -20,7 +20,7 @@ namespace RenderLab {
     m_graphics = make_shared<GraphicsVulkan>("Vulkan Graphics", hinstance, window);
     //m_graphics = make_shared<GraphicsOpenGL>("OpenGL Graphics", hinstance, window);
     m_graphics->initialize(2);
-    m_renderTechnique = make_shared<RenderTechnique>("Default Render Technique", hinstance, window, m_graphics);
+    m_renderTechnique = make_shared<RenderTechnique>("Default Render Technique", this, hinstance, window, m_graphics);
     m_graphics->setRenderTechnique(m_renderTechnique);
 
     m_modelLoader = make_shared<ModelLoader>();

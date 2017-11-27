@@ -303,7 +303,7 @@ namespace RenderLab
       vkQueueSubmit(m_commandQueue, 1, &submitInfo, backBuffer.m_renderFence);
       vkWaitForFences(m_device, 1, &backBuffer.m_renderFence, true, UINT64_MAX);
 
-	    VkResult r = vkGetQueryPoolResults(m_device, m_queryPool, 0, 3, sizeof(m_currentTimestamp), (void*)m_currentTimestamp, sizeof(uint64_t), VK_QUERY_RESULT_WAIT_BIT | VK_QUERY_RESULT_64_BIT);
+	  VkResult r = vkGetQueryPoolResults(m_device, m_queryPool, 0, 3, sizeof(m_currentTimestamp), (void*)m_currentTimestamp, sizeof(uint64_t), VK_QUERY_RESULT_WAIT_BIT | VK_QUERY_RESULT_64_BIT);
     }
   }
 

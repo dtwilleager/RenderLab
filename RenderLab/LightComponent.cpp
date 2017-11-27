@@ -63,6 +63,16 @@ namespace RenderLab
     position = m_position;
   }
 
+  void LightComponent::setViewPosition(vec3& position)
+  {
+    m_viewPosition = position;
+  }
+
+  void LightComponent::getViewPosition(vec3& position)
+  {
+    position = m_viewPosition;
+  }
+
   void LightComponent::setDirection(vec3& direction)
   {
     m_direction = direction;

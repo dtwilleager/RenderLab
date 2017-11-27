@@ -3,8 +3,9 @@
 
 namespace RenderLab
 {
-  RenderTechnique::RenderTechnique(string name, HINSTANCE hinstance, HWND window, shared_ptr<Graphics> graphics):
+  RenderTechnique::RenderTechnique(string name, WorldManager* worldManager, HINSTANCE hinstance, HWND window, shared_ptr<Graphics> graphics):
     m_name(name),
+    m_worldManager(worldManager),
     m_hinstance(hinstance),
     m_window(window),
     m_graphics(graphics),
@@ -151,6 +152,9 @@ namespace RenderLab
     m_clusterData->m_clusters = (Cluster*)malloc(numClusters*sizeof(Cluster));
     m_clusterData->m_numClusterVerts = numVerts;
     m_clusterData->m_localVerts = vertexBuffer;
+	  m_clusterData->m_numXSegments = numXSegments;
+	  m_clusterData->m_numYSegments = numYSegments;
+	  m_clusterData->m_numZSegments = numZSegments;
     m_clusterData->m_clusterVerts = (vec3*)malloc(numVerts*sizeof(vec3));
 
     // Get the eye and direction in world space
@@ -212,6 +216,7 @@ namespace RenderLab
 
     uint32_t iindex = 0;
     uint32_t bvindex = 0;
+    uint32_t clusterIndex = 0;
     for (uint32_t k = 0; k < numZSegments-1; k++)
     {
       vindex = k * (numYSegments + 1) * (numXSegments + 1);
@@ -247,17 +252,35 @@ namespace RenderLab
           indexBuffer[iindex++] = bvindex + numXSegments + 1;
           indexBuffer[iindex++] = bvindex;
 
-          m_clusterData->m_clusters->m_verts[0] = vindex;
-          m_clusterData->m_clusters->m_verts[1] = vindex + 1;
-          m_clusterData->m_clusters->m_verts[2] = vindex + 1 + numXSegments + 1;
-          m_clusterData->m_clusters->m_verts[3] = vindex + numXSegments + 1;
-          m_clusterData->m_clusters->m_verts[4] = bvindex;
-          m_clusterData->m_clusters->m_verts[5] = bvindex + 1;
-          m_clusterData->m_clusters->m_verts[6] = bvindex + 1 + numXSegments + 1;
-          m_clusterData->m_clusters->m_verts[7] = bvindex + numXSegments + 1;
+          m_clusterData->m_clusters[clusterIndex].m_verts[0] = vindex;
+          m_clusterData->m_clusters[clusterIndex].m_verts[1] = vindex + 1;
+          m_clusterData->m_clusters[clusterIndex].m_verts[2] = vindex + 1 + numXSegments + 1;
+          m_clusterData->m_clusters[clusterIndex].m_verts[3] = vindex + numXSegments + 1;
+          m_clusterData->m_clusters[clusterIndex].m_verts[4] = bvindex;
+          m_clusterData->m_clusters[clusterIndex].m_verts[5] = bvindex + 1;
+          m_clusterData->m_clusters[clusterIndex].m_verts[6] = bvindex + 1 + numXSegments + 1;
+          m_clusterData->m_clusters[clusterIndex].m_verts[7] = bvindex + numXSegments + 1;
 
+          vec3 p[8];
+          for (int i = 0; i < 8; i++)
+          {
+            uint32_t vertexIndex = m_clusterData->m_clusters[clusterIndex].m_verts[i] * 3;
+            p[i].x = m_clusterData->m_localVerts[vertexIndex];
+            p[i].y = m_clusterData->m_localVerts[vertexIndex +1];
+            p[i].z = m_clusterData->m_localVerts[vertexIndex +2];
+          }
+
+          m_clusterData->m_clusters[clusterIndex].m_planes[0] = planeEquation(p[0], p[3], p[2]);
+          m_clusterData->m_clusters[clusterIndex].m_planes[1] = planeEquation(p[1], p[2], p[6]);
+          m_clusterData->m_clusters[clusterIndex].m_planes[2] = planeEquation(p[5], p[6], p[7]);
+          m_clusterData->m_clusters[clusterIndex].m_planes[3] = planeEquation(p[4], p[7], p[3]);
+          m_clusterData->m_clusters[clusterIndex].m_planes[4] = planeEquation(p[1], p[5], p[4]);
+          m_clusterData->m_clusters[clusterIndex].m_planes[5] = planeEquation(p[3], p[7], p[6]);
+
+          m_clusterData->m_clusters[clusterIndex].m_lights = new vector<shared_ptr<LightComponent>>;
           vindex++;
           bvindex++;
+          clusterIndex++;
         }
         vindex++;
         bvindex++;
@@ -487,11 +510,123 @@ namespace RenderLab
       m_clusterData->m_clusterVerts[i] = vec3(invViewTransform * localPoint);
     }
 
+    for (size_t i = 0; i < m_lightComponents.size(); ++i)
+    {
+      vec3 position;
+      mat4 transform;
+      m_lightComponents[i]->getPosition(position);
+      m_lightComponents[i]->getEntity(0)->getCompositeTransform(transform);
+      vec3 lightViewPosition = vec3(transform * vec4(position, 1.0f));
+      m_lightComponents[i]->setViewPosition(lightViewPosition);
+    }
+
+    size_t maxLights = 0;
+    size_t minLights = 100000;
+    size_t numZero = 0;
+    size_t totalLights = 0;
+
+    uint32_t clusterIndex = 0;
+	  for (uint32_t k = 0; k < m_clusterData->m_numZSegments-1; k++)
+	  {
+		  for (uint32_t j = 0; j < m_clusterData->m_numYSegments; j++)
+		  {
+			  for (uint32_t i = 0; i < m_clusterData->m_numXSegments; i++)
+			  {
+          vec3 p1 = m_clusterData->m_clusterVerts[m_clusterData->m_clusters[clusterIndex].m_verts[0]];
+          vec3 p2 = m_clusterData->m_clusterVerts[m_clusterData->m_clusters[clusterIndex].m_verts[1]];
+          vec3 p3 = m_clusterData->m_clusterVerts[m_clusterData->m_clusters[clusterIndex].m_verts[2]];
+          vec3 p4 = m_clusterData->m_clusterVerts[m_clusterData->m_clusters[clusterIndex].m_verts[3]];
+          vec3 p5 = m_clusterData->m_clusterVerts[m_clusterData->m_clusters[clusterIndex].m_verts[4]];
+          vec3 p6 = m_clusterData->m_clusterVerts[m_clusterData->m_clusters[clusterIndex].m_verts[5]];
+          vec3 p7 = m_clusterData->m_clusterVerts[m_clusterData->m_clusters[clusterIndex].m_verts[6]];
+          vec3 p8 = m_clusterData->m_clusterVerts[m_clusterData->m_clusters[clusterIndex].m_verts[7]];
+
+          //m_clusterData->m_clusters[clusterIndex].m_planes[0].w = updatePlaneD(m_clusterData->m_clusters[clusterIndex].m_planes[0], p1);
+          //m_clusterData->m_clusters[clusterIndex].m_planes[1].w = updatePlaneD(m_clusterData->m_clusters[clusterIndex].m_planes[1], p2);
+          //m_clusterData->m_clusters[clusterIndex].m_planes[2].w = updatePlaneD(m_clusterData->m_clusters[clusterIndex].m_planes[2], p6);
+          //m_clusterData->m_clusters[clusterIndex].m_planes[3].w = updatePlaneD(m_clusterData->m_clusters[clusterIndex].m_planes[3], p5);
+          //m_clusterData->m_clusters[clusterIndex].m_planes[4].w = updatePlaneD(m_clusterData->m_clusters[clusterIndex].m_planes[4], p2);
+          //m_clusterData->m_clusters[clusterIndex].m_planes[5].w = updatePlaneD(m_clusterData->m_clusters[clusterIndex].m_planes[5], p4);
+
+          m_clusterData->m_clusters[clusterIndex].m_planes[0] = planeEquation(p1, p4, p3);
+          m_clusterData->m_clusters[clusterIndex].m_planes[1] = planeEquation(p2, p3, p7);
+          m_clusterData->m_clusters[clusterIndex].m_planes[2] = planeEquation(p6, p7, p8);
+          m_clusterData->m_clusters[clusterIndex].m_planes[3] = planeEquation(p5, p8, p4);
+          m_clusterData->m_clusters[clusterIndex].m_planes[4] = planeEquation(p2, p6, p5);
+          m_clusterData->m_clusters[clusterIndex].m_planes[5] = planeEquation(p4, p8, p7);
+
+          m_clusterData->m_clusters[clusterIndex].m_lights->clear();
+          for (uint32_t l = 0; l < m_lightComponents.size(); l++)
+          {
+            vec3 lightViewPosition;
+            m_lightComponents[l]->getViewPosition(lightViewPosition);
+            if (intersectsCluster(clusterIndex, lightViewPosition, 25.0f))
+            {
+              m_clusterData->m_clusters[clusterIndex].m_lights->push_back(m_lightComponents[l]);
+              totalLights++;
+            }
+          }
+
+          size_t numLights = m_clusterData->m_clusters[clusterIndex].m_lights->size();
+          if (numLights == 0)
+          {
+            numZero++;
+          }
+          if (numLights > maxLights)
+          {
+            maxLights = numLights;
+          }
+          if (numLights < minLights)
+          {
+            minLights = numLights;
+          }
+          clusterIndex++;
+			  }
+		  }
+	  }
+
+    m_worldManager->printLog("MaxLights: " + std::to_string(maxLights) + ", totalLights: " + std::to_string(totalLights) + ", zeros: " + std::to_string(numZero));
     if (!m_freezeClusterEntity)
     {
       m_clusterEntity->setTransform(invViewTransform);
       m_clusterEntity->updateCompositeTransform(mat4());
     }
+  }
+
+  vec4 RenderTechnique::planeEquation(vec3 p1, vec3 p2, vec3 p3)
+  {
+    vec4 plane;
+    vec3 v1 = glm::normalize(p3 - p2);
+    vec3 v2 = glm::normalize(p1 - p2);
+    vec3 normal = glm::normalize(glm::cross(v1, v2));
+    
+    plane.x = -normal.x;
+    plane.y = -normal.y;
+    plane.z = -normal.z;
+    plane.w = -(normal.x * p1.x + normal.y * p1.y + normal.z * p1.z);
+    return plane;
+  }
+
+  float RenderTechnique::updatePlaneD(vec4 plane, vec3 p)
+  {
+    return -(plane.x * p.x + plane.y * p.y + plane.z * p.z);
+  }
+
+  bool RenderTechnique::intersectsCluster(uint32_t clusterIndex, vec3 lightViewPosition, float radius)
+  {
+    bool intersects = true;
+    for (int i = 0; i < 6; i++)
+    {
+      vec4 plane = m_clusterData->m_clusters[clusterIndex].m_planes[i];
+      float denom = 1.0f / sqrt(plane.x * plane.x + plane.y*plane.y + plane.z*plane.z);
+      float d = (plane.x * lightViewPosition.x + plane.y * lightViewPosition.y + plane.z * lightViewPosition.z + plane.w) * denom;
+      if ((d + radius) < 0.0f)
+      {
+        return false;
+      }
+    }
+
+    return intersects;
   }
 
   void RenderTechnique::updateFrameData(uint32_t frameIndex)
